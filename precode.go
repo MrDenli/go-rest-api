@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -52,7 +53,9 @@ func getTasks(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	if _, err := w.Write(resp); err != nil {
+		log.Printf("Ошибка при записи ответа: %v", err)
+	}
 }
 
 func postTasks(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +70,11 @@ func postTasks(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.Unmarshal(buf.Bytes(), &task); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if _, exists := tasks[task.ID]; exists {
+		http.Error(w, "Задача с таким ID уже существует", http.StatusConflict)
 		return
 	}
 
@@ -91,13 +99,15 @@ func getTasksId(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(resp)
+	if _, err := w.Write(resp); err != nil {
+		log.Printf("Ошибка при записи ответа: %v", err)
+	}
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if _, ok := tasks[id]; !ok {
-		http.Error(w, "Задача не найдена", http.StatusBadRequest)
+		http.Error(w, "Задача не найдена", http.StatusNotFound)
 		return
 	}
 
